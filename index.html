@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Levi Interior — Staff Login</title>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  :root{
+    --primary:#2563eb;--accent:#06b6d4;--muted:#64748b;--card:#fff;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#eef2ff 0%,#fff 100%);color:#0f172a}
+  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{width:100%;max-width:440px;background:var(--card);border-radius:16px;box-shadow:0 18px 40px rgba(2,6,23,0.08);padding:36px;position:relative;overflow:visible}
+  .logo{width:88px;height:88px;border-radius:14px;margin:0 auto;display:block;background:linear-gradient(135deg,var(--primary),var(--accent));padding:6px;object-fit:cover}
+  h1{margin:14px 0 6px;text-align:center;font-size:26px;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .tag{color:var(--muted);text-align:center;margin-bottom:18px}
+  .form-row{display:flex;flex-direction:column;gap:10px}
+  input{padding:12px;border-radius:10px;border:1px solid #eef2f6;font-size:15px}
+  .buttons{display:flex;gap:10px;margin-top:12px}
+  .btn{flex:1;padding:12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+  .btn-primary{background:linear-gradient(90deg,var(--primary),var(--accent));color:white}
+  .btn-ghost{background:white;border:1px solid #e6eefb;color:var(--primary)}
+  .muted{color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
+  .contact-toggle{margin-top:14px;padding:10px;border-radius:10px;border:1px solid #eef2f6;background:#fff;cursor:pointer;font-weight:600}
+  .contact-box{display:none;margin-top:12px;padding:12px;border-radius:10px;background:#fbfdff;border:1px dashed #e6eefb;color:var(--muted)}
+  .contact-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+  .contact-row .name{font-weight:600}
+  .contact-row .actions{display:flex;gap:8px;align-items:center}
+  .copy-btn{cursor:pointer;border:0;background:none;color:var(--primary);font-weight:700}
+  .call-btn{cursor:pointer;border:0;background:none;color:#0b76b9;font-weight:700}
+  .result{margin-top:12px;height:20px;text-align:center}
+  .welcome-screen{display:none;padding:40px 10px;text-align:center}
+  .welcome{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;opacity:0;transform:translateY(20px);animation:fadeUp 0.9s forwards}
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+  footer{margin-top:14px;text-align:center;color:var(--muted);font-size:13px}
+  @media(max-width:420px){.card{padding:20px}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="loginCard">
+      <img class="logo" src="https://i.imgur.com/1ZBsB7z.jpeg" alt="Levi Logo" />
+      <h1>Levi Interior</h1>
+      <div class="tag">Staff Portal — Login</div>
+
+      <div id="formArea">
+        <div class="form-row">
+          <input id="staffId" placeholder="Enter your Staff ID (4 digits)" />
+          <input id="password" placeholder="Enter your Password" type="password" />
+        </div>
+
+        <div class="buttons">
+          <button id="btnLogin" class="btn btn-primary">Login</button>
+          <button id="btnContact" class="btn btn-ghost">Contact Us</button>
+        </div>
+
+        <div id="result" class="result muted"></div>
+
+        <div id="contactBox" class="contact-box" aria-hidden="true">
+          <div class="contact-row">
+            <div><span class="name">Owner — Rahul Mehta</span><div class="muted small">Owner</div></div>
+            <div class="actions">
+              <button class="call-btn" onclick="callNumber('+919876543210')">📞</button>
+              <button class="copy-btn" onclick="copyNumber('+919876543210')">📋</button>
+            </div>
+          </div>
+          <div class="contact-row">
+            <div><span class="name">Admin — Priya Sharma</span><div class="muted small">Admin</div></div>
+            <div class="actions">
+              <button class="call-btn" onclick="callNumber('+919123456789')">📞</button>
+              <button class="copy-btn" onclick="copyNumber('+919123456789')">📋</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="welcomeScreen" class="welcome-screen" aria-hidden="true">
+        <div id="welcomeMsg" class="welcome"></div>
+        <div class="muted" style="margin-top:12px">Redirecting to dashboard...</div>
+      </div>
+
+      <footer>© 2025 Levi Interior</footer>
+    </div>
+  </div>
+
+<script>
+const API_BASE = "https://levi-api-i095.onrender.com/api";
+
+// device id for this browser
+const DEVICE_KEY = "levi_device_id";
+let deviceId = localStorage.getItem(DEVICE_KEY);
+if(!deviceId){
+  // use crypto.randomUUID if available, else fallback
+  deviceId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('DEV_' + Math.random().toString(36).slice(2,10));
+  localStorage.setItem(DEVICE_KEY, deviceId);
+}
+
+// helper: copy
+function copyNumber(num){
+  navigator.clipboard.writeText(num).then(()=> alert('Copied: ' + num)).catch(()=> alert('Copy failed'));
+}
+function callNumber(num){
+  // open phone dialer
+  location.href = 'tel:' + num;
+}
+
+// sanitize password stored string (remove surrounding quotes, spaces)
+function normalizePassword(p){
+  if(p===undefined || p===null) return '';
+  let s = String(p).trim();
+  if((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))){
+    s = s.slice(1,-1).trim();
+  }
+  return s;
+}
+
+// UI elements
+const btnLogin = document.getElementById('btnLogin');
+const btnContact = document.getElementById('btnContact');
+const contactBox = document.getElementById('contactBox');
+const resultEl = document.getElementById('result');
+const welcomeScreen = document.getElementById('welcomeScreen');
+const welcomeMsg = document.getElementById('welcomeMsg');
+const formArea = document.getElementById('formArea');
+const loginCard = document.getElementById('loginCard');
+
+btnContact.addEventListener('click', ()=>{
+  const showing = contactBox.style.display === 'block';
+  contactBox.style.display = showing ? 'none' : 'block';
+  contactBox.setAttribute('aria-hidden', showing ? 'true' : 'false');
+});
+
+// login flow
+btnLogin.addEventListener('click', async ()=>{
+  resultEl.textContent = '';
+  const id = document.getElementById('staffId').value.trim();
+  const pass = document.getElementById('password').value;
+  if(!id || !pass){ resultEl.innerHTML = '<span style="color:#d04444">Please enter both ID and Password</span>'; return; }
+
+  resultEl.textContent = 'Verifying...';
+
+  try {
+    // fetch staff list (API may return array or {staff:[]})
+    const res = await axios.get(API_BASE + '/staff', { timeout: 15000 });
+    let users = [];
+    if(Array.isArray(res.data)) users = res.data;
+    else if(Array.isArray(res.data.staff)) users = res.data.staff;
+    else if(Array.isArray(res.data.data)) users = res.data.data;
+    else {
+      // find any array inside
+      for(const k in res.data){ if(Array.isArray(res.data[k])){ users = res.data[k]; break; } }
+    }
+
+    // find user by various id fields
+    const user = users.find(u=>{
+      const uid = (u.userId || u.userID || u.id || u._id || '').toString();
+      return uid === id;
+    });
+
+    if(!user){ resultEl.innerHTML = '<span style="color:#d04444">Invalid ID</span>'; return; }
+
+    const saved = normalizePassword(user.password);
+    if(saved !== pass.trim()){
+      resultEl.innerHTML = '<span style="color:#d04444">Incorrect password</span>'; return;
+    }
+
+    // disabled check
+    const disabledFlag = (String(user.disabled || '').toUpperCase() === 'TRUE' || user.disabled === true);
+    if(disabledFlag){ resultEl.innerHTML = '<span style="color:#d04444">Your account is disabled. Contact admin.</span>'; return; }
+
+    // device lock check
+    if(user.deviceid && String(user.deviceid).trim() !== '' && String(user.deviceid).trim() !== deviceId){
+      resultEl.innerHTML = '<span style="color:#d04444">Already logged in on another device</span>'; return;
+    }
+
+    // success: mark active true and save deviceid on server
+    const targetId = user._id || user.id || user.userId || user.userID;
+    try {
+      await axios.put(`${API_BASE}/updatestaff/${targetId}`, { active: true, deviceid: deviceId });
+    } catch(e){
+      // non-fatal: show warning but continue
+      console.warn('update active failed', e);
+    }
+
+    // save locally and show welcome animation
+    const name = user.name || 'User';
+    localStorage.setItem('levi_staff', JSON.stringify({ id: targetId, name, userRecord: user }));
+    formArea.style.display = 'none';
+    welcomeScreen.style.display = 'block';
+    welcomeMsg.textContent = `Welcome to Levi Interior, ${name}!`;
+    // animate (fadeUp in CSS)
+    setTimeout(()=> {
+      // 6 second wait before redirect (as requested)
+      window.location.href = 'main.html';
+    }, 6000);
+
+  } catch (err){
+    console.error(err);
+    const msg = err.response && err.response.data ? (JSON.stringify(err.response.data).slice(0,200)) : err.message;
+    resultEl.innerHTML = `<span style="color:#d04444">Server error: ${msg}</span>`;
+  }
+});
+
+// If already logged in (localStorage), go to main directly (auto-redirect)
+(function autoRedirectIfLogged(){
+  try {
+    const local = localStorage.getItem('levi_staff');
+    if(local){
+      // optionally we could verify token with server, but for now assume active
+      // show short animation then redirect
+      formArea.style.display = 'none';
+      welcomeScreen.style.display = 'block';
+      const parsed = JSON.parse(local);
+      const name = parsed.name || 'User';
+      welcomeMsg.textContent = `Welcome to Levi Interior, ${name}!`;
+      setTimeout(()=> window.location.href = 'main.html', 6000);
+    }
+  } catch(e){ /* ignore parse errors */ }
+})();
+</script>
+</body>
+</html>

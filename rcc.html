@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Levi Interiors — Final (Patched)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#071028; --muted:#9fb4c3; --text:#e7f0f7;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg); color:var(--text); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(180deg, rgba(2,6,23,0.85), rgba(2,6,23,0.65));border-bottom:1px solid rgba(255,255,255,0.06)}
+.brand{display:flex;gap:10px;align-items:center}
+.logo{width:48px;height:48px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.titlebox h1{font-size:16px;margin:0;font-weight:700;color:#eafdf8}
+.controls{display:flex;gap:10px;align-items:center}
+.btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);color:var(--text);font-weight:700}
+.panel{display:flex;gap:12px;padding:12px;height:calc(100vh - 92px)}
+.left{width:320px;min-width:220px}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03)}
+.right{flex:1;display:flex;flex-direction:column}
+#canvasWrap{background:linear-gradient(180deg,#fff,#f6fbff);border-radius:10px;position:relative;overflow:hidden;flex:1;min-height:520px;border:1px solid rgba(3,10,20,0.06)}
+.canvasInner{position:absolute;inset:0;padding:12px;display:flex;align-items:stretch}
+canvas{display:block;width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg,#fff,#fbfdff);touch-action:none}
+.pencil-toggle{position:absolute;left:12px;top:12px;z-index:120;padding:12px 16px;border-radius:12px;background:linear-gradient(180deg,#fff,#e6f7fa);color:#022;font-weight:800;box-shadow:0 8px 30px rgba(2,6,23,0.25);border:2px solid rgba(6,182,212,0.18);display:flex;gap:8px;align-items:center;font-size:16px}
+.draw-label{position:absolute;left:170px;top:12px;z-index:120;padding:10px 14px;border-radius:12px;background:linear-gradient(180deg,#fff,#f3fbff);color:#022;font-weight:700;border:1px solid rgba(2,6,23,0.05);box-shadow:0 6px 20px rgba(2,6,23,0.12)}
+.zoom-toggle{position:absolute;left:320px;top:10px;z-index:120;padding:10px 14px;border-radius:12px;background:linear-gradient(180deg,#06b6d4,#0284c7);color:#012;font-weight:800;border:2px solid rgba(2,6,23,0.12);box-shadow:0 8px 30px rgba(2,6,23,0.25)}
+/* new: stack zoom buttons under pencil, left side */
+.zoom-left{
+  position:absolute;
+  left:12px;      /* same left as pencil */
+  top:64px;       /* sits below the pencil button */
+  z-index:145;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.zoom-small-btn{
+  padding:8px 12px;
+  border-radius:10px;
+  background:linear-gradient(180deg,#ffffff,#f0f7fb);
+  color:#012;
+  font-weight:800;
+  border:1px solid rgba(2,6,23,0.06);
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(2,6,23,0.08);
+  width:110px;   /* tweak to match visual weight of pencil */
+  text-align:center;
+}
+.selected-text-box{position:absolute;border:2px dashed rgba(94,165,250,0.9);pointer-events:none;border-radius:6px;display:none;z-index:70;background:transparent}
+.totals-below{margin-top:12px;background:linear-gradient(180deg, rgba(0,0,0,0.04), rgba(255,255,255,0.01));border-radius:10px;padding:10px;border:1px solid rgba(255,255,255,0.04);min-width:320px;text-align:left;color:#e6f0f4}
+@media (max-width:980px){ .panel{flex-direction:column;height:auto;padding:12px} .left{width:100%} #canvasWrap{height:56vh} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo"><img src="https://i.imgur.com/ChWQwAI.jpeg" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:6px"></div>
+    <div class="titlebox"><h1>Levi Interiors</h1><div style="font-size:12px;color:#9fb4c3">Final — small walls & PDF export</div></div>
+  </div>
+  <div class="controls">
+    <button id="downloadPdfHeader" class="btn">Export PDF</button>
+  </div>
+</header>
+
+<div class="panel">
+  <div class="left">
+    <div class="card">
+      <label style="color:#9fb4c3">Project name</label>
+      <input id="projectName" value="Levi-Project" style="width:100%;padding:8px;border-radius:6px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text)"/>
+      <div style="height:10px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="undoBtn">Undo</button>
+        <button class="btn" id="deleteSelected">Delete</button>
+        <button class="btn" id="clearAll">Clear All</button>
+        <button class="btn" id="downloadPdf">Download PDF</button>
+      </div>
+      <div style="height:12px"></div>
+      <label style="color:#9fb4c3">Units & scale</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn unit-btn selected" data-unit="m">m</button>
+        <button class="btn unit-btn" data-unit="cm">cm</button>
+        <button class="btn unit-btn" data-unit="ft">ft</button>
+        <button class="btn unit-btn" data-unit="in">in</button>
+      </div>
+      <label style="color:#9fb4c3">Scale (px per meter)</label>
+      <input id="scalePxPerUnit" type="number" value="100" style="width:100%;padding:8px;border-radius:6px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text)"/>
+      <div style="height:8px"></div>
+      <div style="font-size:12px;color:var(--muted)">Small-wall threshold reduced — now 2-3 inch walls will be accepted.</div>
+      <div style="height:8px"></div>
+      <label style="color:#9fb4c3">Guides</label>
+      <div style="display:flex;gap:8px">
+        <button id="toggleGuides" class="btn">Guides: ON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div id="canvasWrap">
+      <button id="pencilToggle" class="pencil-toggle" aria-pressed="false">✏ Pencil: OFF</button>
+
+      <!-- zoom buttons now grouped under pencil on the left side -->
+      <div class="zoom-left">
+        <button id="zoomInBtn" class="zoom-small-btn">🔍 + Zoom In</button>
+        <button id="zoomOutBtn" class="zoom-small-btn">🔍 − Zoom Out</button>
+      </div>
+
+      <button id="drawTextBtn" class="draw-label">📝 Draw Text</button>
+      <button id="zoomToggle" class="zoom-toggle">Zoom: OFF</button>
+
+      <div class="canvasInner">
+        <canvas id="c"></canvas>
+        <div id="selectedTextBox" class="selected-text-box"></div>
+      </div>
+    </div>
+
+    <div class="totals-below" id="totalsBelow">
+      <div style="display:flex;justify-content:space-between"><div>Total Walls:</div><div id="b_totalLength">—</div></div>
+      <div style="height:6px"></div>
+      <div style="display:flex;justify-content:space-between"><div><strong>Combined</strong></div><div id="b_combined">—</div></div>
+    </div>
+
+  </div>
+</div>
+
+<footer style="text-align:center;padding:8px;color:#9fb4c3">Levi Interiors — Final</footer>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', ()=> {
+  const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+  const pencilBtn = document.getElementById('pencilToggle');
+  const drawTextBtn = document.getElementById('drawTextBtn');
+  const zoomToggle = document.getElementById('zoomToggle');
+  const downloadPdf = document.getElementById('downloadPdf');
+  const downloadPdfHeader = document.getElementById('downloadPdfHeader');
+  const toggleGuidesBtn = document.getElementById('toggleGuides');
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+
+  let DPR = window.devicePixelRatio || 1;
+  let scale = 1, tx = 0, ty = 0;
+  let pencilOn=false, drawing=false, start=null;
+  let lines=[], texts=[], nextTextId=1;
+  let selectedIndex=-1, selectedTextId=null;
+  let moveAnchor=null, moveTextAnchor=null, moving=false, movingText=false;
+  let curUnit='m', scalePxPerMeter = parseFloat(document.getElementById('scalePxPerUnit').value) || 100;
+  let zoomActive=false, panMode=false, lastPan=null;
+  let lastPointerScreen = null;
+  let showGuides = true;
+
+  const SNAP_ENDPOINT_PX = 5;
+  const SNAP_ALIGN_PX = 8;
+  const GAP_DISPLAY_MAX_PX = 400;
+
+  // dynamic min wall length (based on current scalePxPerMeter)
+  function getMinWallLengthPx(){
+    const minMeters = 0.0508; // 2 inches ≈ 0.0508 m
+    return minMeters * scalePxPerMeter;
+  }
+
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    if(rect.width === 0 || rect.height === 0){ canvas.style.width='960px'; canvas.style.height='640px'; }
+    const r2 = canvas.getBoundingClientRect();
+    canvas.width = Math.round(r2.width * DPR);
+    canvas.height = Math.round(r2.height * DPR);
+    canvas.style.width = r2.width + 'px';
+    canvas.style.height = r2.height + 'px';
+    ctx.setTransform(1,0,0,1,0,0);
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function toCanvasCoords(clientX,clientY){
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * DPR;
+    const y = (clientY - rect.top) * DPR;
+    return { x: (x - tx) / scale, y: (y - ty) / scale };
+  }
+  function worldDist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+  function metersFromPx(px){ return px / scalePxPerMeter; }
+  function convertWorldLengthToUnit(worldPx){
+    const m = metersFromPx(worldPx);
+    if(curUnit==='m') return `${m.toFixed(2)} m`;
+    if(curUnit==='cm') return `${(m*100).toFixed(1)} cm`;
+    if(curUnit==='ft'){ const ft = Math.floor(m*3.28084); const inches = ((m*3.28084)-ft)*12; return `${ft}ft ${inches.toFixed(1)}in`; }
+    if(curUnit==='in'){ return `${(m*39.3701).toFixed(1)} in`; }
+    return `${m.toFixed(2)} m`;
+  }
+
+  function findNearestEndpoint(pt){
+    if(lines.length===0) return null;
+    let best=null;
+    for(let i=0;i<lines.length;i++){
+      const ln = lines[i];
+      const a={x:ln.x1,y:ln.y1}, b={x:ln.x2,y:ln.y2};
+      const da = worldDist(pt,a), db = worldDist(pt,b);
+      if(best===null || da < best.d) best={lineIndex:i,which:'a',point:a,d:da};
+      if(db < best.d) best={lineIndex:i,which:'b',point:b,d:db};
+    }
+    return best;
+  }
+
+  function computeAlignGuidesForPointer(screenX, screenY){
+    const rect = canvas.getBoundingClientRect();
+    const worldPt = toCanvasCoords(screenX, screenY);
+    let bestX = {d:Infinity, x:null, sx:null};
+    let bestY = {d:Infinity, y:null, sy:null};
+    for(const ln of lines){
+      const cands = [{x:ln.x1,y:ln.y1}, {x:ln.x2,y:ln.y2}];
+      for(const c of cands){
+        const sx = (c.x*scale + tx)/DPR + rect.left;
+        const sy = (c.y*scale + ty)/DPR + rect.top;
+        const dx = Math.abs(sx - screenX), dy = Math.abs(sy - screenY);
+        if(dx < bestX.d){ bestX = {d:dx, x:c.x, sx, sy}; }
+        if(dy < bestY.d){ bestY = {d:dy, y:c.y, sx, sy}; }
+      }
+    }
+    const guides = [];
+    if(bestX.d <= SNAP_ALIGN_PX) guides.push({type:'v', pos: bestX.x, snapX: bestX.x, snapY: worldPt.y});
+    if(bestY.d <= SNAP_ALIGN_PX) guides.push({type:'h', pos: bestY.y, snapX: worldPt.x, snapY: bestY.y});
+    return guides;
+  }
+
+  function drawGuideLine(type, pos){
+    ctx.save();
+    ctx.setLineDash([8/scale,6/scale]);
+    ctx.lineWidth = 1.5 / Math.max(0.0001, scale);
+    ctx.strokeStyle = 'rgba(6,182,212,0.95)';
+    if(type==='h'){ ctx.beginPath(); ctx.moveTo(-10000, pos); ctx.lineTo(10000, pos); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(pos, -10000); ctx.lineTo(pos, 10000); ctx.stroke(); }
+    ctx.restore();
+  }
+  function drawMarker(x,y){
+    ctx.save();
+    ctx.fillStyle = 'rgba(6,182,212,0.95)';
+    ctx.beginPath(); ctx.arc(x,y,6/scale,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save(); ctx.translate(tx,ty); ctx.scale(scale,scale);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    for(let i=0;i<lines.length;i++){
+      const ln = lines[i];
+      ctx.beginPath(); ctx.moveTo(ln.x1,ln.y1); ctx.lineTo(ln.x2,ln.y2);
+      ctx.lineWidth = 8 / Math.max(0.0001, scale);
+      ctx.strokeStyle = (i===selectedIndex ? '#ef4444' : 'rgba(7,12,20,0.98)');
+      ctx.lineCap='round'; ctx.stroke();
+
+      const raw = Math.hypot(ln.x2-ln.x1, ln.y2-ln.y1);
+      const label = convertWorldLengthToUnit(raw);
+      const mx = (ln.x1+ln.x2)/2, my = (ln.y1+ln.y2)/2;
+      ctx.save();
+      ctx.font = `${13/scale}px Inter, sans-serif`;
+      ctx.lineWidth = 3/Math.max(0.0001, scale);
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.strokeText(label, mx + (8/scale), my - (8/scale));
+      ctx.fillStyle = 'rgba(4,23,38,0.98)';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, mx, my - (14/scale));
+      ctx.restore();
+
+      const rect = canvas.getBoundingClientRect();
+      ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.font='13px Inter, sans-serif'; const tw = ctx.measureText(label).width; ctx.restore();
+      const sx = (mx*scale + tx)/DPR + rect.left;
+      const sy = (my*scale + ty)/DPR + rect.top;
+      ln._labelBox = {x:sx, y:sy, w:(tw+8)/scale/DPR, h:(16/scale)/DPR};
+    }
+
+    for(const t of texts){
+      ctx.save();
+      ctx.translate(t.x,t.y);
+      ctx.rotate((t.angle||0)*Math.PI/180);
+      ctx.font = `${t.size}px Inter, sans-serif`;
+      ctx.textBaseline = 'top';
+      ctx.lineWidth = Math.max(1, Math.round(2/scale));
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.strokeText(t.text, 0, 0);
+      ctx.fillStyle = 'rgba(4,23,38,0.98)';
+      ctx.fillText(t.text, 0, 0);
+      ctx.restore();
+      ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.font = `${t.size}px Inter, sans-serif`; const w = ctx.measureText(t.text).width; ctx.restore();
+      t._bbox = {x:t.x,y:t.y,w,h: t.size*1.2};
+    }
+
+    if(showGuides && lastPointerScreen){
+      const guides = computeAlignGuidesForPointer(lastPointerScreen.x, lastPointerScreen.y);
+      for(const g of guides){
+        drawGuideLine(g.type, g.pos);
+        if(g.type==='h') drawMarker((g.snapX||toCanvasCoords(lastPointerScreen.x,lastPointerScreen.y).x), g.pos);
+        else drawMarker(g.pos, (g.snapY||toCanvasCoords(lastPointerScreen.x,lastPointerScreen.y).y));
+      }
+    }
+
+    ctx.restore();
+    computeTotals();
+    updateSelectedTextBox();
+  }
+
+  function updateSelectedTextBox(){
+    if(!selectedTextId){ document.getElementById('selectedTextBox').style.display='none'; return; }
+    const t = texts.find(x=>x.id===selectedTextId);
+    if(!t){ document.getElementById('selectedTextBox').style.display='none'; return; }
+    const rect = canvas.getBoundingClientRect();
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.font = `${t.size}px Inter, sans-serif`; const wMeasure = ctx.measureText(t.text).width; ctx.restore();
+    const left = (t.x * scale + tx)/DPR + rect.left;
+    const top = (t.y * scale + ty)/DPR + rect.top;
+    const w = (wMeasure) * scale / DPR;
+    const h = (t.size * 1.2) * scale / DPR;
+    const box = document.getElementById('selectedTextBox');
+    box.style.display='block';
+    box.style.left = left + 'px';
+    box.style.top = top + 'px';
+    box.style.width = w + 'px';
+    box.style.height = h + 'px';
+  }
+
+  function computeTotals(){
+    let totalPx = 0; for(const ln of lines) totalPx += Math.hypot(ln.x2-ln.x1, ln.y2-ln.y1);
+    document.getElementById('b_totalLength').textContent = convertWorldLengthToUnit(totalPx);
+    document.getElementById('b_combined').textContent = convertWorldLengthToUnit(totalPx);
+  }
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    canvas.setPointerCapture(e.pointerId);
+    lastPointerScreen = {x:e.clientX, y:e.clientY};
+    const pt = toCanvasCoords(e.clientX,e.clientY);
+
+    if(zoomActive){
+      panMode = true; lastPan = {x:e.clientX, y:e.clientY}; return;
+    }
+
+    if(pencilOn){
+      const near = findNearestEndpoint(pt);
+      if(near && near.d < SNAP_ENDPOINT_PX) start = {x:near.point.x,y:near.point.y};
+      else {
+        const guides = computeAlignGuidesForPointer(e.clientX, e.clientY);
+        if(guides.length){
+          let sx = pt.x, sy = pt.y;
+          for(const g of guides){
+            if(g.type==='h') sy = g.pos;
+            if(g.type==='v') sx = g.pos;
+          }
+          start = {x:sx, y:sy};
+        } else start = pt;
+      }
+      drawing=true; selectedIndex=-1; selectedTextId=null; draw(); return;
+    }
+
+    for(let i=texts.length-1;i>=0;i--){
+      const t = texts[i];
+      ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.font = `${t.size}px Inter, sans-serif`; const w = ctx.measureText(t.text).width; ctx.restore();
+      const h = t.size * 1.2;
+      const dx = pt.x - t.x, dy = pt.y - t.y;
+      if(dx >= -8 && dx <= w+8 && dy >= -6 && dy <= h+6){ selectedTextId = t.id; movingText=true; moveTextAnchor = pt; draw(); return; }
+    }
+
+    selectedTextId = null; selectedIndex = -1;
+    for(let i=0;i<lines.length;i++){
+      const ln = lines[i];
+      const d = pointToSegmentDistance(pt.x,pt.y,ln.x1,ln.y1,ln.x2,ln.y2);
+      if(d <= 10/scale){ selectedIndex = i; break; }
+    }
+    if(selectedIndex >= 0){ const ln = lines[selectedIndex]; const mx=(ln.x1+ln.x2)/2, my=(ln.y1+ln.y2)/2; if(worldDist({x:mx,y:my},pt) < 20){ moving=true; moveAnchor = pt; } }
+    draw();
+  });
+
+  canvas.addEventListener('pointermove', (e)=>{
+    lastPointerScreen = {x:e.clientX, y:e.clientY};
+    if(zoomActive && panMode && lastPan){
+      tx += (e.clientX - lastPan.x) * DPR; ty += (e.clientY - lastPan.y) * DPR; lastPan = {x:e.clientX, y:e.clientY}; draw(); return;
+    }
+    if(!drawing && !moving && !movingText) return;
+    const pt = toCanvasCoords(e.clientX,e.clientY);
+
+    if(drawing && pencilOn){
+      draw();
+      ctx.save(); ctx.translate(tx,ty); ctx.scale(scale,scale);
+      let end = {x:pt.x,y:pt.y};
+      const guides = computeAlignGuidesForPointer(e.clientX, e.clientY);
+      if(guides.length){ for(const g of guides){ if(g.type==='h') end.y = g.pos; if(g.type==='v') end.x = g.pos; } }
+      const nearEnd = findNearestEndpoint(end);
+      if(nearEnd && nearEnd.d < SNAP_ENDPOINT_PX) { end.x = nearEnd.point.x; end.y = nearEnd.point.y; }
+      const dx = end.x - start.x, dy = end.y - start.y; const ang = Math.abs(Math.atan2(dy,dx))*180/Math.PI;
+      if(Math.abs(ang) < 10) end.y = start.y;
+      else if(Math.abs(90-ang) < 10) end.x = start.x;
+      ctx.beginPath(); ctx.moveTo(start.x,start.y); ctx.lineTo(end.x,end.y);
+      ctx.lineWidth = 6/scale; ctx.strokeStyle = '#7b8794'; ctx.stroke();
+      const raw = Math.hypot(end.x-start.x,end.y-start.y);
+      const lab = convertWorldLengthToUnit(raw);
+      const mx = (start.x+end.x)/2, my = (start.y+end.y)/2;
+      ctx.font = `${12/scale}px Inter, sans-serif`;
+      ctx.lineWidth = 3/Math.max(0.0001, scale); ctx.strokeStyle='rgba(255,255,255,0.95)'; ctx.strokeText(lab, mx + (8/scale), my - (8/scale));
+      ctx.fillStyle = 'rgba(4,23,38,0.98)'; ctx.fillText(lab, mx + (8/scale), my - (8/scale));
+      for(const g of guides){ drawGuideLine(g.type, g.pos); if(g.type==='h') drawMarker((g.snapX||end.x), g.pos); else drawMarker(g.pos, (g.snapY||end.y)); }
+      ctx.restore();
+    } else if(moving && selectedIndex>=0){
+      const dx = pt.x - moveAnchor.x, dy = pt.y - moveAnchor.y;
+      const ln = lines[selectedIndex]; ln.x1 += dx; ln.x2 += dx; ln.y1 += dy; ln.y2 += dy; moveAnchor = pt; draw();
+    } else if(movingText && selectedTextId!=null){
+      const dx = pt.x - moveTextAnchor.x, dy = pt.y - moveTextAnchor.y;
+      const t = texts.find(x=>x.id===selectedTextId); if(t){ t.x += dx; t.y += dy; moveTextAnchor = pt; draw(); }
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e)=>{
+    canvas.releasePointerCapture(e.pointerId);
+    if(zoomActive && panMode){ panMode=false; lastPan=null; return; }
+    if(drawing && pencilOn){
+      let pt = toCanvasCoords(e.clientX,e.clientY);
+      const nearStart = findNearestEndpoint(start);
+      if(nearStart && nearStart.d < SNAP_ENDPOINT_PX) start = {x:nearStart.point.x,y:nearStart.point.y};
+      const nearEnd = findNearestEndpoint(pt);
+
+      if (nearEnd && nearEnd.d < SNAP_ENDPOINT_PX) {
+        const sameEndpoint =
+          nearStart &&
+          Math.abs(nearStart.point.x - nearEnd.point.x) < 1e-3 &&
+          Math.abs(nearStart.point.y - nearEnd.point.y) < 1e-3;
+
+        if (!sameEndpoint) {
+          // normal snap
+          pt = { x: nearEnd.point.x, y: nearEnd.point.y };
+        } else {
+          // Start और End एक ही existing point पर snap हो रहे हैं।
+          // pointer के raw position से direction निकालकर forced tiny wall बनाएँ
+          const rawPtr = toCanvasCoords(e.clientX, e.clientY);
+          let dxRaw = rawPtr.x - start.x;
+          let dyRaw = rawPtr.y - start.y;
+          const rawLen = Math.hypot(dxRaw, dyRaw);
+          let ux = 1, uy = 0;
+          if(rawLen > 1e-6){
+            ux = dxRaw / rawLen;
+            uy = dyRaw / rawLen;
+          } else {
+            // fallback to lastPointerScreen direction if available
+            if(lastPointerScreen){
+              const prev = toCanvasCoords(lastPointerScreen.x, lastPointerScreen.y);
+              const dx2 = rawPtr.x - prev.x, dy2 = rawPtr.y - prev.y;
+              const l2 = Math.hypot(dx2, dy2);
+              if(l2 > 1e-6){ ux = dx2 / l2; uy = dy2 / l2; }
+            }
+          }
+          const minPx = getMinWallLengthPx();
+          pt = {
+            x: start.x + ux * minPx,
+            y: start.y + uy * minPx
+          };
+        }
+      }
+
+      const guides = computeAlignGuidesForPointer(e.clientX, e.clientY);
+      if(guides.length){ for(const g of guides){ if(g.type==='h') pt.y = g.pos; if(g.type==='v') pt.x = g.pos; } }
+      const dx = pt.x - start.x, dy = pt.y - start.y;
+      const ang = Math.abs(Math.atan2(dy,dx))*180/Math.PI;
+      if(Math.abs(ang) < 10) pt.y = start.y;
+      else if(Math.abs(90-ang) < 10) pt.x = start.x;
+      // ALLOWED: very small walls (threshold dynamic)
+      if(Math.hypot(dx,dy) > getMinWallLengthPx()) lines.push({x1:start.x,y1:start.y,x2:pt.x,y2:pt.y});
+      start=null; drawing=false; computeTotals(); draw();
+    }
+    moving=false; movingText=false; moveAnchor=null; moveTextAnchor=null;
+  });
+
+  function pointToSegmentDistance(px,py,x1,y1,x2,y2){
+    const A = px-x1, B = py-y1, C = x2-x1, D = y2-y1;
+    const dot = A*C + B*D; const len_sq = C*C + D*D;
+    let param = -1;
+    if(len_sq !== 0) param = dot/len_sq;
+    let xx, yy;
+    if(param < 0){ xx = x1; yy = y1; }
+    else if(param > 1){ xx = x2; yy = y2; }
+    else { xx = x1 + param*C; yy = y1 + param*D; }
+    const dx = px-xx, dy = py-yy; return Math.hypot(dx,dy);
+  }
+
+  pencilBtn.addEventListener('click', ()=>{
+    pencilOn = !pencilOn;
+    pencilBtn.textContent = pencilOn ? '✏ Pencil: ON' : '✏ Pencil: OFF';
+    pencilBtn.setAttribute('aria-pressed', String(pencilOn));
+  });
+
+  drawTextBtn.addEventListener('click', ()=>{
+    const lbl = prompt('Enter text:'); if(!lbl) return;
+    alert('Canvas पर क्लिक करके text रखें');
+    const place = function(ev){
+      const p = toCanvasCoords(ev.clientX, ev.clientY);
+      texts.push({id: nextTextId++, x:p.x, y:p.y, text: lbl, size: 28, angle: 0});
+      canvas.removeEventListener('pointerdown', place);
+      draw();
+    };
+    canvas.addEventListener('pointerdown', place);
+  });
+
+  document.querySelectorAll('.unit-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.unit-btn').forEach(x=>x.classList.remove('selected'));
+      btn.classList.add('selected'); curUnit = btn.dataset.unit; draw(); computeTotals();
+    });
+  });
+
+  // --- NEW: zoomBy helper + buttons bindings ---
+  function zoomBy(factor){
+    // clamp and center on last pointer or center
+    const rect = canvas.getBoundingClientRect();
+    const centerScreen = lastPointerScreen || { x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 };
+    const cx = (centerScreen.x - rect.left) * DPR;
+    const cy = (centerScreen.y - rect.top) * DPR;
+    const MIN_SCALE = 0.2, MAX_SCALE = 6;
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+    if(Math.abs(newScale - scale) < 1e-6) return;
+    tx = cx - ((cx - tx) * (newScale / scale));
+    ty = cy - ((cy - ty) * (newScale / scale));
+    scale = newScale;
+    zoomActive = true;
+    // keep panMode unchanged; user can enable pan via zoom toggle if desired
+    draw();
+  }
+
+  if(zoomInBtn){
+    zoomInBtn.addEventListener('click', ()=>{ zoomBy(1.3); });
+  }
+  if(zoomOutBtn){
+    zoomOutBtn.addEventListener('click', ()=>{ zoomBy(1/1.3); });
+  }
+  // --- end zoomBy ---
+
+  // Zoom toggle (improved): zoom toward last pointer or canvas center; keep transform on OFF
+  zoomToggle.addEventListener('click', (ev) => {
+    const ZOOM_FACTOR = 1.5;
+    const rect = canvas.getBoundingClientRect();
+    const centerScreen = lastPointerScreen || { x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 };
+    const cx = (centerScreen.x - rect.left) * DPR;
+    const cy = (centerScreen.y - rect.top) * DPR;
+
+    if (!zoomActive) {
+      const newScale = Math.min(6, scale * ZOOM_FACTOR);
+      tx = cx - ((cx - tx) * (newScale / scale));
+      ty = cy - ((cy - ty) * (newScale / scale));
+      scale = newScale;
+      zoomActive = true; panMode = true; zoomToggle.textContent = 'Zoom: ON';
+      pencilOn = false; pencilBtn.textContent = '✏ Pencil: OFF'; pencilBtn.setAttribute('aria-pressed','false');
+    } else {
+      zoomActive = false; panMode = false; zoomToggle.textContent = 'Zoom: OFF';
+    }
+    draw();
+  });
+
+  // toggle guides button
+  toggleGuidesBtn.addEventListener('click', ()=>{
+    showGuides = !showGuides;
+    toggleGuidesBtn.textContent = showGuides ? 'Guides: ON' : 'Guides: OFF';
+    draw();
+  });
+
+  // scale input handler — keep scalePxPerMeter current
+  document.getElementById('scalePxPerUnit').addEventListener('input', (e)=>{
+    scalePxPerMeter = parseFloat(e.target.value) || 100;
+    draw();
+  });
+
+  // PDF export (uses jsPDF). Adds totals below the canvas in PDF.
+  async function exportPDF(){
+    const rect = canvas.getBoundingClientRect();
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.round(rect.width * DPR);
+    tmp.height = Math.round(rect.height * DPR);
+    const tctx = tmp.getContext('2d');
+    // white background
+    tctx.fillStyle='#fff'; tctx.fillRect(0,0,tmp.width,tmp.height);
+    // draw scene into tmp respecting current transform
+    tctx.save(); tctx.translate(tx, ty); tctx.scale(scale, scale);
+    // walls
+    for(const ln of lines){
+      tctx.beginPath(); tctx.moveTo(ln.x1,ln.y1); tctx.lineTo(ln.x2,ln.y2);
+      tctx.lineWidth = 8; tctx.strokeStyle = '#0b1220'; tctx.lineCap='round'; tctx.stroke();
+      const raw = Math.hypot(ln.x2-ln.x1, ln.y2-ln.y1);
+      const lab = convertWorldLengthToUnit(raw);
+      const mx = (ln.x1+ln.x2)/2, my = (ln.y1+ln.y2)/2;
+      tctx.font = '20px Inter, sans-serif'; tctx.fillStyle = '#000'; tctx.fillText(lab, mx + 12, my - 12);
+    }
+    // texts (transparent background)
+    for(const t of texts){
+      tctx.save(); tctx.translate(t.x,t.y); tctx.rotate((t.angle||0)*Math.PI/180);
+      tctx.font = `${t.size}px Inter, sans-serif`; tctx.fillStyle = '#000'; tctx.fillText(t.text,0,0); tctx.restore();
+    }
+    tctx.restore();
+
+    const dataUrl = tmp.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    // create PDF with extra space for totals
+    const extraH = 120;
+    const pdf = new jsPDF({ orientation:'landscape', unit:'px', format:[tmp.width, tmp.height + extraH]});
+    pdf.addImage(dataUrl, 'PNG', 0, 0, tmp.width, tmp.height);
+    // totals from DOM
+    const wallStr = document.getElementById('b_totalLength').textContent || '';
+    const combStr = document.getElementById('b_combined').textContent || '';
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(16);
+    const centerX = tmp.width / 2 - 80;
+    pdf.text('Totals:', centerX, tmp.height + 28);
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(12);
+    pdf.text(`Total Walls: ${wallStr}`, centerX, tmp.height + 52);
+    pdf.text(`Combined   : ${combStr}`, centerX, tmp.height + 72);
+
+    let filename = (document.getElementById('projectName').value||'Levi-Project').trim(); if(!filename) filename='Levi-Project';
+    filename = filename.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '_') + '.pdf';
+    pdf.save(filename);
+  }
+
+  downloadPdf.addEventListener('click', exportPDF);
+  downloadPdfHeader.addEventListener('click', exportPDF);
+
+  // Undo/Delete/Clear
+  document.getElementById('undoBtn').addEventListener('click', ()=>{ if(selectedTextId!=null){ const idx=texts.findIndex(t=>t.id===selectedTextId); if(idx>=0) texts.splice(idx,1); selectedTextId=null; draw(); return; } if(selectedIndex>=0){ lines.splice(selectedIndex,1); selectedIndex=-1; draw(); return; } if(lines.length) lines.pop(); else if(texts.length) texts.pop(); draw(); });
+  document.getElementById('deleteSelected').addEventListener('click', ()=>{ if(selectedTextId!=null){ const idx=texts.findIndex(t=>t.id===selectedTextId); if(idx>=0) texts.splice(idx,1); selectedTextId=null; draw(); return;} if(selectedIndex>=0){ lines.splice(selectedIndex,1); selectedIndex=-1; draw(); return; } alert('Select wall or text first'); });
+  document.getElementById('clearAll').addEventListener('click', ()=>{ if(!confirm('Clear all drawings?')) return; lines=[]; texts=[]; selectedIndex=-1; selectedTextId=null; computeTotals(); draw(); });
+
+  // keyboard nudge
+  window.addEventListener('keydown',(e)=>{ if(selectedIndex>=0){ const ln=lines[selectedIndex]; let dx=0,dy=0; const MOVE_NUDGE_PX=10; if(e.key==='ArrowLeft') dx=-MOVE_NUDGE_PX; else if(e.key==='ArrowRight') dx=MOVE_NUDGE_PX; else if(e.key==='ArrowUp') dy=-MOVE_NUDGE_PX; else if(e.key==='ArrowDown') dy=MOVE_NUDGE_PX; if(dx||dy){ ln.x1+=dx; ln.x2+=dx; ln.y1+=dy; ln.y2+=dy; computeTotals(); draw(); e.preventDefault(); } } });
+
+  draw();
+});
+</script>
+</body>
+</html>
+ 

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Levi Calculator</title>
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #101010;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+.wrap { width: 420px; max-width: 96vw; }
+header {
+  background: linear-gradient(90deg, #1565c0, #42a5f5);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px 10px 0 0;
+}
+header .left { display: flex; align-items: center; gap: 10px; }
+header img.logo {
+  width: 32px; height: 32px; border-radius: 50%;
+  object-fit: cover; border: 2px solid #fff;
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+header button {
+  background: #fff; color: #1565c0; border: none;
+  padding: 8px 14px; font-weight: 700;
+  border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+
+#recentBox {
+  background: #1c1c1c; border-radius: 10px;
+  padding: 10px; margin-top: 10px;
+  max-height: 180px; overflow-y: auto; font-size: 14px;
+}
+
+#recentBox .item {
+  display: flex; justify-content: space-between;
+  padding: 6px 6px; border-bottom: 1px solid #222;
+  cursor: pointer;
+}
+#recentBox .item:hover{ background:#333; }
+
+/* ⭐ SqFt value always red */
+#recentBox .item span:last-child {color:#ff5252;font-weight:700;}
+
+#result {
+  background: #fff; color: #000;
+  padding: 18px; border-radius: 8px;
+  font-weight: 900; text-align: right;
+  font-size: 36px; margin: 10px 0;
+  word-break: break-all;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+button.key {
+  height: 70px; border: none; border-radius: 8px;
+  font-weight: 700; font-size: 20px; cursor: pointer;
+}
+.num {background: #333; color: #fff;}
+.op {background: #666; color: #fff;}
+.unit {background: #c62828; color: #fff;}
+.eq {background: #169b21; color: #fff;}
+
+footer { text-align: center; color: #888; margin-top: 12px; }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header>
+  <div class="left">
+    <img src="https://i.imgur.com/1ZBsB7z.jpeg" alt="logo" class="logo" />
+    <h1>Levi Calculator</h1>
+  </div>
+  <button onclick="window.location.href='history.html'">Open History</button>
+</header>
+
+<div id="recentBox"></div>
+<div id="result"></div>
+
+<div class="grid">
+  <button class="key num" onclick="press('7')">7</button>
+  <button class="key num" onclick="press('8')">8</button>
+  <button class="key num" onclick="press('9')">9</button>
+  <button class="key op" onclick="op('÷')">÷</button>
+
+  <button class="key num" onclick="press('4')">4</button>
+  <button class="key num" onclick="press('5')">5</button>
+  <button class="key num" onclick="press('6')">6</button>
+  <button class="key op" onclick="op('×')">×</button>
+
+  <button class="key num" onclick="press('1')">1</button>
+  <button class="key num" onclick="press('2')">2</button>
+  <button class="key num" onclick="press('3')">3</button>
+  <button class="key op" onclick="op('-')">-</button>
+
+  <button class="key unit" onclick="addUnit('ft')">ft</button>
+  <button class="key num" onclick="press('0')">0</button>
+  <button class="key unit" onclick="addUnit('in')">in</button>
+  <button class="key op" onclick="op('+')">+</button>
+
+  <button class="key unit" onclick="addUnit('m')">m</button>
+  <button class="key unit" onclick="addUnit('mm')">mm</button>
+  <button class="key eq" onclick="calc()">=</button>
+  <button class="key op" onclick="back()">⌫</button>
+</div>
+
+<footer>All values auto-convert to SqFt — Levi Interior</footer>
+
+</div><!-- wrap end -->
+
+<script>
+// -------------------- VARIABLES --------------------
+let typed = "";
+let lastUnit = "";
+let editIndex = null;
+
+const res = document.getElementById("result");
+const recentBox = document.getElementById("recentBox");
+
+let history = [];
+try { history = JSON.parse(localStorage.getItem("beamHistory")) || []; }
+catch (e){ history = []; }
+
+// -------------------- BASIC INPUT --------------------
+function press(n){ typed+=n; show(); }
+function addUnit(u){ typed+=" "+u+" "; lastUnit=u; show(); }
+function op(o){ typed+=" "+o+" "; show(); }
+function back(){ typed=typed.trim().slice(0,-1); show(); }
+
+function formatDisplay(t){
+  return t.replace(/\s*ft\s*/g,"'")
+          .replace(/\s*in\b/g,'"')
+          .replace(/\s+/g,' ')
+          .trim();
+}
+function show(){ res.textContent = formatDisplay(typed); }
+
+// -------------------- UNIT CONVERSION --------------------
+function toFeet(s){
+  if(!s) return 0;
+  s = s.trim().toLowerCase();
+
+  // normalise fancy quotes if any
+  s = s.replace(/′/g,"'").replace(/″/g,'"');
+
+  // 1) pattern: 20 ft 5 in  OR  20' 5"
+  const combo = s.match(/(\d+(?:\.\d+)?)\s*(?:ft|')\s*(\d+(?:\.\d+)?)?\s*(?:in|")?/);
+  if (combo) {
+    const ft   = parseFloat(combo[1]) || 0;
+    const inch = combo[2] !== undefined ? (parseFloat(combo[2]) || 0) : 0;
+    return ft + inch / 12;
+  }
+
+  // 2) only feet (20 ft, 14')
+  if (/(ft|')/.test(s)) {
+    const ft = parseFloat(s.replace(/[^\d.\-]/g,'')) || 0;
+    return ft;
+  }
+
+  // 3) only inches (26", 26 in)
+  if (/(in|")/.test(s)) {
+    const inch = parseFloat(s.replace(/[^\d.\-]/g,'')) || 0;
+    return inch / 12;
+  }
+
+  // 4) meters / millimeters
+  if (s.includes("m") && !s.includes("mm")) {
+    return (parseFloat(s.replace(/[^\d.\-]/g,'')) || 0) * 3.28084;
+  }
+  if (s.includes("mm")) {
+    return (parseFloat(s.replace(/[^\d.\-]/g,'')) || 0) / 304.8;
+  }
+
+  // 5) plain number, assume feet
+  return parseFloat(s.replace(/[^\d.\-]/g,'')) || 0;
+}
+
+// -------------------- MAIN CALC --------------------
+function calc(){
+  if(!typed.trim()) return;
+
+  let exp = typed.trim();
+  let sym = null;
+
+  if(/[×xX*]/.test(exp)) sym='×';
+  else if(/[÷/]/.test(exp)) sym='÷';
+  else if(/\+/.test(exp)) sym='+';
+  else if(/-/.test(exp)) sym='-';
+
+  let resultFt = 0;
+
+  if(sym){
+    const parts = exp.split(/×|x|X|\*|÷|\/|\+|-/).map(p=>p.trim());
+    let a = parts[0], b = parts[1];
+
+    if(lastUnit && !/[a-z'"]/i.test(b)) b += lastUnit;
+
+    const fa = toFeet(a);
+    const fb = toFeet(b);
+
+    switch(sym){
+      case '×': resultFt = fa * fb; break;
+      case '÷': resultFt = fb ? fa / fb : 0; break;
+      case '+': resultFt = fa + fb; break;
+      case '-': resultFt = fa - fb; break;
+    }
+  } else {
+    resultFt = toFeet(exp);
+  }
+
+  // 👉 Change "4" to 2 or 3 if you want fewer decimals
+  const ans = (Math.round(resultFt*10000)/10000).toFixed(4) + " SqFt";
+  const displayExp = formatDisplay(exp);
+
+  // -------------------- REPLACE OR ADD --------------------
+  if(editIndex !== null){
+      history[editIndex] = { label: displayExp, value: ans };
+      editIndex = null;
+  } else {
+      history.push({ label: displayExp, value: ans });
+  }
+
+  localStorage.setItem("beamHistory", JSON.stringify(history));
+
+  res.textContent = ans;
+  typed = "";
+  show();
+  loadRecent();
+}
+
+// -------------------- LOAD HISTORY --------------------
+function loadRecent(){
+  const stored = JSON.parse(localStorage.getItem("beamHistory")) || [];
+
+  if(stored.length === 0){
+    recentBox.innerHTML = "<i>No calculations yet</i>";
+    return;
+  }
+
+  let html = "";
+  stored.forEach((h,i)=>{
+    html += `
+      <div class='item' data-index='${i}'>
+        <span>${h.label}</span>
+        <span>${h.value}</span>
+      </div>`;
+  });
+
+  recentBox.innerHTML = html;
+}
+loadRecent();
+
+// -------------------- CLICK TO LOAD BACK --------------------
+recentBox.addEventListener("click", function(e){
+  const row = e.target.closest(".item");
+  if(!row) return;
+
+  let stored = JSON.parse(localStorage.getItem("beamHistory")) || [];
+
+  editIndex = parseInt(row.getAttribute("data-index"),10);
+
+  typed = stored[editIndex].label;
+  res.textContent = stored[editIndex].label;
+});
+</script>
+</body>
+</html>
