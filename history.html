@@ -669,6 +669,7 @@ function openRowMenu(index, btnEl, it){
      <button data-action="deleteRow">🗑️ Delete Row</button>
      <button data-action="addFooter">📄 Add Footer</button>` :
     `<button data-action="addHeader">➕ Add Header</button>
+	<button data-action="addFooter">📄 Add Footer</button>
      <button data-action="subtotal">🧮 Subtotal</button>
      <button data-action="amount">💰 Amount</button>
      <button data-action="accessories">🧰 Accessories</button>
@@ -1337,6 +1338,7 @@ function saveToFolder(){
   saveFolders(folders);
   alert('Saved to folder: '+cname);
 }
+
 </script>
 
 <script>
@@ -1351,6 +1353,15 @@ if(saveFolderBtn){
   saveFolderBtn.onclick = ()=>{
     saveToFolder();
   };
+}
+else if(action === 'addHeaderBelow'){
+  if(idx>=0){
+    const txt = prompt('Header text:');
+    if(txt){
+      history.splice(idx+1,0,{type:'header',label:txt,value:''});
+      persist();
+    }
+  }
 }
 </script>
 </body>
