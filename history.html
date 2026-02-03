@@ -1,5 +1,8 @@
 <!doctype html>
 <html lang="en">
+<!-- FULL FILE CONTENT WITH PLAIN HEADER SUPPORT -->
+<!doctype html>
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -28,6 +31,7 @@
   .history{flex:1;overflow:auto;padding:6px 8px;position:relative}
   .hist-item{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1.5px solid #000;margin-bottom:8px;background:transparent;font-size:13px}
   .hist-item.header{background:#e8e8e8;color:#000;font-weight:800;border-radius:6px;padding:12px;}
+.hist-item.plainheader{background:transparent;color:#000;font-weight:700;border-radius:0;padding:6px 8px;}
   .hist-item .label{color:#000;font-weight:600;flex:1;padding-right:12px}
   .hist-item .value{color:#ff5252;font-weight:800;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .menu-btn{background:transparent;border:0;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px}
@@ -562,7 +566,7 @@ function render(){
   historyList.innerHTML = '';
   history.forEach((it, idx) => {
     if(it.type === 'note') return;
-    const row = document.createElement('div'); row.className = 'hist-item' + (it.type==='header' ? ' header' : '');
+    const row = document.createElement('div'); row.className = 'hist-item' + (it.type==='header' ? ' header' : '') + (it.type==='plainheader' ? ' plainheader' : '');
     const label = document.createElement('div'); label.className = 'label'; label.textContent = it.label || '';
     const val = document.createElement('div'); val.className = 'value';
     if(it.type === 'amount') val.textContent = '₹' + parseNumber(it.value).toFixed(2);
@@ -669,7 +673,7 @@ function openRowMenu(index, btnEl, it){
      <button data-action="deleteRow">🗑️ Delete Row</button>
      <button data-action="addFooter">📄 Add Footer</button>` :
     `<button data-action="addHeader">➕ Add Header</button>
-	<button data-action="addFooter">📄 Add Footer</button>
+     <button data-action="addPlainHeader">➕ Plain Header</button>
      <button data-action="subtotal">🧮 Subtotal</button>
      <button data-action="amount">💰 Amount</button>
      <button data-action="accessories">🧰 Accessories</button>
@@ -731,19 +735,29 @@ function onActiveDropdownClick(e){
     }
   } else if(action === 'addHeader'){
     if(idx>=0){ const txt = prompt('Header text:'); if(txt){ history.splice(idx,0,{type:'header',label:txt,value:''}); persist(); } }
-  } else if(action === 'addFooter'){
+  } else if(action === 'addPlainHeader'){ if(idx>=0){ const txt=prompt('Plain header text:'); if(txt){ history.splice(idx,0,{type:'plainheader',label:txt,value:''}); persist(); }} }
+ else if(action === 'addFooter'){
     if(idx>=0){ const txt = prompt('Footer text:'); if(txt){ history.splice(idx+1,0,{type:'footer',label:txt,value:''}); persist(); } }
   } else if(action === 'subtotal'){
     if(idx>=0){
-      let t=0; for(let i=0;i<=idx;i++){ const it=history[i]; if(it && (it.type==='calc' || it.type==='subtotal')) {
-        const nums = extractNumbersFromText(it.value);
-        if(nums.length) t += nums[0];
-        else {
-          const nFallback = parseNumber(it.value) || parseNumber(it.label);
-          if(nFallback) t += nFallback;
+      let t = 0;
+      for(let i=0;i<=idx;i++){
+        const it = history[i];
+        if(!it) continue;
+
+        // ONLY add amount rows (₹)
+        if(it.type === 'amount'){
+          t += parseNumber(it.value);
         }
-      }}
-      history.splice(idx+1,0,{type:'subtotal',label:'Subtotal',value:t}); persist();
+      }
+
+      history.splice(idx+1,0,{
+        type:'subtotal',
+        label:'Subtotal',
+        value: t.toFixed(2)
+      });
+
+      persist();
     }
   } else if(action === 'amount'){
     if(idx>=0){
@@ -1129,8 +1143,12 @@ document.getElementById('pdfDownload').onclick = async () => {
     const marginBottom = 20;
 
     const wrap = document.getElementById('wrap');
+    // ===== MOBILE & PC SAME PDF FIX =====
+    const originalWidth = wrap.style.width;
+    wrap.style.width = "720px";   // force PC-like layout on mobile
+
     const wrapRect = wrap.getBoundingClientRect();
-    const scaleFactor = 2;
+    const scaleFactor = 2; // fixed scale for all devices
 
     // === Collect SAFE line-based break positions (in canvas pixels) ===
     let breaks = [0];
@@ -1338,7 +1356,6 @@ function saveToFolder(){
   saveFolders(folders);
   alert('Saved to folder: '+cname);
 }
-
 </script>
 
 <script>
@@ -1353,15 +1370,6 @@ if(saveFolderBtn){
   saveFolderBtn.onclick = ()=>{
     saveToFolder();
   };
-}
-else if(action === 'addHeaderBelow'){
-  if(idx>=0){
-    const txt = prompt('Header text:');
-    if(txt){
-      history.splice(idx+1,0,{type:'header',label:txt,value:''});
-      persist();
-    }
-  }
 }
 </script>
 </body>
